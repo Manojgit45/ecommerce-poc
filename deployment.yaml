@@ -6,6 +6,7 @@ metadata:
   name: nginx
   branch: release
   feature: 101
+  feature: cherry-pick
 spec:
   replicas: 1
   selector:
