@@ -1,0 +1,30 @@
+global:
+  registry: ecommercepocacr.azurecr.io
+
+services:
+  product:
+    image: product-service
+    tag: latest
+  cart:
+    image: cart-service
+    tag: latest
+  order:
+    image: order-service
+    tag: latest
+  payment:
+    image: payment-service
+    tag: latest
+  notification:
+    image: notification-service
+    tag: latest
+
+replicaCount: 1
+workloadIdentity:
+  clientId: "replace-with-terraform-output"
+service:
+  port: 80
+  targetPort: 8080
+
+gateway:
+  enabled: false
+  host: ecommerce.example.com

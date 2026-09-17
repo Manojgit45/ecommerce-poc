@@ -1,0 +1,18 @@
+{{- range $name, $_ := .Values.services }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ecommerce.fullname" $ }}-{{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+  ports:
+    - name: http
+      port: {{ $.Values.service.port }}
+      targetPort: http
+---
+{{- end }}

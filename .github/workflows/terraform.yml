@@ -1,0 +1,80 @@
+name: Terraform
+
+on:
+  pull_request:
+    paths:
+      - terraform/**
+      - .github/workflows/terraform.yml
+  push:
+    branches: [main]
+    paths:
+      - terraform/**
+      - .github/workflows/terraform.yml
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    name: Terraform
+    if: ${{ hashFiles('terraform/**/*.tf') != '' }}
+    runs-on: self-hosted
+    env:
+      TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+      TF_VAR_name_prefix: ecommerce-poc
+      TF_VAR_apim_publisher_email: ${{ secrets.APIM_PUBLISHER_EMAIL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login with GitHub OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init -input=false -reconfigure
+
+      - name: Terraform Format
+        working-directory: terraform
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        working-directory: terraform
+        run: terraform validate
+
+      - name: Retrieve SQL password from Key Vault
+        env:
+          KEY_VAULT_NAME: ${{ vars.SQL_KEY_VAULT_NAME }}
+          SQL_SECRET_NAME: ${{ vars.SQL_KEY_VAULT_SECRET_NAME || 'sql-admin-password' }}
+        run: |
+          test -n "$KEY_VAULT_NAME" || { echo "SQL_KEY_VAULT_NAME is required"; exit 1; }
+          echo "TF_VAR_sql_admin_password<<EOF" >> "$GITHUB_ENV"
+          az keyvault secret show \
+            --vault-name "$KEY_VAULT_NAME" \
+            --name "$SQL_SECRET_NAME" \
+            --query value \
+            -o tsv >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+
+      - name: Terraform Plan
+        if: ${{ github.event_name == 'pull_request' }}
+        working-directory: terraform
+        run: terraform plan -input=false -no-color
+
+      - name: Terraform Apply
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        working-directory: terraform
+        run: terraform apply -input=false -auto-approve

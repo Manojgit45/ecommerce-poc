@@ -1,0 +1,142 @@
+name: E-Commerce CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  ACR_NAME: ecommercepocacr
+  REGISTRY: ecommercepocacr.azurecr.io
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        if: ${{ hashFiles('services/**/requirements.txt', 'requirements.txt') != '' }}
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          find services -name requirements.txt -print0 2>/dev/null | xargs -0 -r -n1 pip install -r
+
+      - name: Run Python syntax checks
+        if: ${{ hashFiles('services/**/*.py') != '' }}
+        run: python -m compileall -q services
+
+      - name: Validate Kubernetes manifests
+        run: |
+          files=$(find . -name '*.yaml' -o -name '*.yml' | sort)
+          test -n "$files"
+          for file in $files; do
+            grep -q '^apiVersion:' "$file"
+            grep -q '^kind:' "$file"
+          done
+
+  build:
+    name: Build Docker Images
+    needs: test
+    if: ${{ hashFiles('services/*/Dockerfile') != '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [product, cart, order, payment, notification]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t "$REGISTRY/${{ matrix.service }}-service:$IMAGE_TAG" "services/${{ matrix.service }}"
+
+  security-scan:
+    name: Security Scan
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: 1
+          ignore-unfixed: true
+
+  push:
+    name: Push Images
+    needs: [test, build, security-scan]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && hashFiles('services/*/Dockerfile') != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login with GitHub OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        run: az acr login --name "$ACR_NAME"
+
+      - name: Build and push images
+        run: |
+          for service in product cart order payment notification; do
+            image="$REGISTRY/${service}-service:$IMAGE_TAG"
+            docker build -t "$image" "services/$service"
+            docker push "$image"
+          done
+
+  update-gitops:
+    name: Update GitOps Repository
+    needs: push
+    if: ${{ needs.push.result == 'success' && vars.GITOPS_REPOSITORY != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout GitOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GITOPS_REPOSITORY }}
+          token: ${{ secrets.GITHUB_PUSH_TOKEN }}
+          path: gitops
+
+      - name: Update Helm image tags
+        uses: mikefarah/yq@v4.45.1
+        with:
+          cmd: |
+            for service in product cart order payment notification; do
+              yq -i '.services.'"$service"'.tag = env(IMAGE_TAG)' gitops/helm/ecommerce/values.yaml
+            done
+
+      - name: Commit and push GitOps change
+        working-directory: gitops
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add helm/ecommerce/values.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: deploy ${IMAGE_TAG:0:7}"
+          git push origin HEAD:main
