@@ -55,8 +55,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        service: [product, cart, order, payment, notification]
+        matrix:
+          service: [frontend, product, cart, order, payment, notification]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -102,7 +102,7 @@ jobs:
 
       - name: Build and push images
         run: |
-          for service in product cart order payment notification; do
+          for service in frontend product cart order payment notification; do
             image="$REGISTRY/${service}-service:$IMAGE_TAG"
             docker build -t "$image" "services/$service"
             docker push "$image"
@@ -127,7 +127,7 @@ jobs:
         uses: mikefarah/yq@v4.45.1
         with:
           cmd: |
-            for service in product cart order payment notification; do
+            for service in frontend product cart order payment notification; do
               yq -i '.services.'"$service"'.tag = env(IMAGE_TAG)' gitops/helm/ecommerce/values.yaml
             done
 

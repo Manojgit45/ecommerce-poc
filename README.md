@@ -6,7 +6,7 @@ This repository is a runnable starter for:
 
 `GitHub -> GitHub Actions -> ACR -> GitOps repository -> Argo CD -> private AKS`
 
-It contains five Flask services under `services/`, Dockerfiles for each service, Terraform for VNet, ACR, private AKS, Key Vault Workload Identity, SQL, Redis, Service Bus, APIM, Front Door, and WAF, and a copy-ready Helm chart under `gitops/helm/ecommerce`. The Argo CD application manifest is under `gitops/argocd`.
+It contains five Flask services under `services/`, a browser storefront under `frontend/`, Dockerfiles for each runtime, Terraform for VNet, ACR, private AKS, Key Vault Workload Identity, SQL, Redis, Service Bus, APIM, Front Door, and WAF, and a copy-ready Helm chart under `gitops/helm/ecommerce`. The Argo CD application manifest is under `gitops/argocd`.
 
 ## Run locally
 
@@ -17,6 +17,15 @@ pip install -r services/product/requirements.txt
 SERVICE_NAME=product python services/product/app.py
 curl http://localhost:8080/healthz
 ```
+
+To run the storefront, start the product service on port 8080 and the frontend on port 3000:
+
+```bash
+cd frontend
+BACKEND_URL=http://localhost:8080 python app.py
+```
+
+Then open `http://localhost:3000`.
 
 Build one image with `docker build -t product-service:local services/product`.
 

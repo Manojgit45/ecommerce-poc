@@ -2,21 +2,36 @@ global:
   registry: ecommercepocacr.azurecr.io
 
 services:
+  frontend:
+    image: frontend-service
+    tag: latest
+    port: 80
+    targetPort: 3000
   product:
     image: product-service
     tag: latest
+    port: 80
+    targetPort: 8080
   cart:
     image: cart-service
     tag: latest
+    port: 80
+    targetPort: 8080
   order:
     image: order-service
     tag: latest
+    port: 80
+    targetPort: 8080
   payment:
     image: payment-service
     tag: latest
+    port: 80
+    targetPort: 8080
   notification:
     image: notification-service
     tag: latest
+    port: 80
+    targetPort: 8080
 
 replicaCount: 1
 workloadIdentity:

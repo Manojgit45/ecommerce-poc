@@ -1,4 +1,4 @@
-{{- range $name, $_ := .Values.services }}
+{{- range $name, $service := .Values.services }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -12,7 +12,7 @@ spec:
     app.kubernetes.io/name: {{ $name }}
   ports:
     - name: http
-      port: {{ $.Values.service.port }}
+      port: {{ $service.port | default $.Values.service.port }}
       targetPort: http
 ---
 {{- end }}

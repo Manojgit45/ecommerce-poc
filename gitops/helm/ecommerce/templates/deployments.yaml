@@ -25,7 +25,7 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
-              containerPort: {{ $.Values.service.targetPort }}
+              containerPort: {{ $service.targetPort | default $.Values.service.targetPort }}
           readinessProbe:
             httpGet:
               path: /healthz
