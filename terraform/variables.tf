@@ -10,7 +10,7 @@ variable "tenant_id" {
 
 variable "location" {
   type    = string
-  default = "eastus"
+  default = "centralus"
 }
 
 variable "name_prefix" {
@@ -21,6 +21,12 @@ variable "name_prefix" {
 variable "kubernetes_version" {
   type    = string
   default = null
+}
+
+variable "node_vm_size" {
+  description = "VM size for the default AKS node pool."
+  type        = string
+  default     = "Standard_D2s_v7"
 }
 
 variable "sql_admin_username" {

@@ -38,10 +38,6 @@ output "sql_server_fqdn" {
   value = azurerm_mssql_server.main.fully_qualified_domain_name
 }
 
-output "front_door_hostname" {
-  value = azurerm_cdn_frontdoor_endpoint.main.host_name
-}
-
 output "apim_gateway_url" {
   value = azurerm_api_management.main.gateway_url
 }

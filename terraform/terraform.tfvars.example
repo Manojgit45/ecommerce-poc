@@ -1,6 +1,6 @@
 subscription_id = "00000000-0000-0000-0000-000000000000"
 tenant_id       = "00000000-0000-0000-0000-000000000000"
-location        = "eastus"
+location        = "centralus"
 name_prefix     = "ecommerce-poc"
 sql_admin_password = "replace-with-a-strong-password"
 apim_publisher_email = "platform@example.com"
