@@ -1,8 +1,9 @@
 resource "azurerm_subnet" "private_endpoints" {
-  name                 = "private-endpoints"
-  resource_group_name  = azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = ["10.20.16.0/24"]
+  name                              = "private-endpoints"
+  resource_group_name               = azurerm_resource_group.main.name
+  virtual_network_name              = azurerm_virtual_network.main.name
+  address_prefixes                  = ["10.20.16.0/24"]
+  private_endpoint_network_policies = "Disabled"
 }
 
 resource "azurerm_key_vault" "main" {

@@ -62,7 +62,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build image
-        run: docker build -t "$REGISTRY/${{ matrix.service }}-service:$IMAGE_TAG" "services/${{ matrix.service }}"
+        run: |
+          context="services/${{ matrix.service }}"
+          [ "${{ matrix.service }}" = "frontend" ] && context="frontend"
+          docker build -t "$REGISTRY/${{ matrix.service }}-service:$IMAGE_TAG" "$context"
 
   security-scan:
     name: Security Scan
@@ -73,7 +76,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: fs
           scan-ref: .
@@ -104,14 +107,16 @@ jobs:
         run: |
           for service in frontend product cart order payment notification; do
             image="$REGISTRY/${service}-service:$IMAGE_TAG"
-            docker build -t "$image" "services/$service"
+            context="services/$service"
+            [ "$service" = "frontend" ] && context="frontend"
+            docker build -t "$image" "$context"
             docker push "$image"
           done
 
   update-gitops:
     name: Update GitOps Repository
     needs: push
-    if: ${{ needs.push.result == 'success' && vars.GITOPS_REPOSITORY != '' }}
+    if: ${{ needs.push.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -119,8 +124,8 @@ jobs:
       - name: Checkout GitOps repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ vars.GITOPS_REPOSITORY }}
-          token: ${{ secrets.GITHUB_PUSH_TOKEN }}
+          repository: ${{ vars.GITOPS_REPOSITORY || github.repository }}
+          token: ${{ secrets.GITHUB_PUSH_TOKEN || github.token }}
           path: gitops
 
       - name: Update Helm image tags

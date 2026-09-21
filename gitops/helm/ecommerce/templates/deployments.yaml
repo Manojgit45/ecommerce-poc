@@ -18,11 +18,27 @@ spec:
         app.kubernetes.io/part-of: ecommerce
         azure.workload.identity/use: "true"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: ecommerce-workload
       containers:
         - name: {{ $name }}
           image: "{{ $.Values.global.registry }}/{{ $service.image }}:{{ $service.tag }}"
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          {{- if eq $name "frontend" }}
+          env:
+            - name: BACKEND_URL
+              value: {{ $.Values.frontend.backendUrl | quote }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ $service.targetPort | default $.Values.service.targetPort }}

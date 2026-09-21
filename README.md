@@ -60,7 +60,7 @@ export TF_VAR_sql_admin_password=$(openssl rand -hex 16)
 terraform plan
 ```
 
-The configuration creates the core platform resources and private endpoints. Review it before applying to a shared subscription; these Azure resources incur costs, and private AKS requires network access to the cluster from an approved administration path.
+The configuration creates the core platform resources and private endpoints. Review it before applying to a shared subscription; these Azure resources incur costs, and private AKS requires network access to the cluster from an approved administration path. The application is a single-replica, in-memory POC: orders and carts are not durable, and it is not production-ready without authentication, persistence, and payment controls.
 
 ### SQL password in Key Vault
 

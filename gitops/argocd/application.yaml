@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/YOUR_ORG/ecommerce-gitops.git
+    repoURL: https://github.com/Manojgit45/ecommerce-poc.git
     targetRevision: main
-    path: helm/ecommerce
+    path: gitops/helm/ecommerce
   destination:
     server: https://kubernetes.default.svc
     namespace: ecommerce

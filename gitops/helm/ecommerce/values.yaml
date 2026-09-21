@@ -34,9 +34,12 @@ services:
     targetPort: 8080
 
 replicaCount: 1
+frontend:
+  backendUrl: "http://ecommerce-ecommerce-product"
 workloadIdentity:
   clientId: "replace-with-terraform-output"
 service:
+  type: LoadBalancer
   port: 80
   targetPort: 8080
 

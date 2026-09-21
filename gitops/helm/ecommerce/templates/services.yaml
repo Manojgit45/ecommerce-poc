@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: {{ $name }}
     app.kubernetes.io/part-of: ecommerce
 spec:
-  type: ClusterIP
+  type: {{ if eq $name "frontend" }}{{ $.Values.service.type | default "ClusterIP" }}{{ else }}ClusterIP{{ end }}
   selector:
     app.kubernetes.io/name: {{ $name }}
   ports:
