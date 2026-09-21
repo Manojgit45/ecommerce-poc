@@ -37,7 +37,7 @@ replicaCount: 1
 frontend:
   backendUrl: "http://ecommerce-ecommerce-product"
 workloadIdentity:
-  clientId: "replace-with-terraform-output"
+  clientId: "8f1389b3-a6a6-4270-9e78-fcae6a6eac9b"
 service:
   type: LoadBalancer
   port: 80
