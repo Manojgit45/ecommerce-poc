@@ -31,7 +31,7 @@ output "service_bus_namespace" {
 }
 
 output "redis_hostname" {
-  value = azurerm_redis_cache.main.hostname
+  value = azurerm_managed_redis.main.hostname
 }
 
 output "sql_server_fqdn" {

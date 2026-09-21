@@ -52,16 +52,18 @@ resource "azurerm_servicebus_queue" "notifications" {
   namespace_id = azurerm_servicebus_namespace.main.id
 }
 
-resource "azurerm_redis_cache" "main" {
-  name                          = "${var.name_prefix}-redis"
-  location                      = azurerm_resource_group.main.location
-  resource_group_name           = azurerm_resource_group.main.name
-  capacity                      = 0
-  family                        = "C"
-  sku_name                      = "Basic"
-  non_ssl_port_enabled          = false
-  public_network_access_enabled = false
-  minimum_tls_version           = "1.2"
+resource "azurerm_managed_redis" "main" {
+  name                  = "${var.name_prefix}-redis"
+  location              = azurerm_resource_group.main.location
+  resource_group_name   = azurerm_resource_group.main.name
+  sku_name              = "Balanced_B0"
+  public_network_access = "Disabled"
+
+  default_database {
+    access_keys_authentication_enabled = true
+    clustering_policy                  = "NoCluster"
+    eviction_policy                    = "NoEviction"
+  }
 }
 
 resource "azurerm_mssql_server" "main" {
@@ -143,7 +145,7 @@ resource "azurerm_private_endpoint" "key_vault" {
 }
 
 resource "azurerm_private_dns_zone" "redis" {
-  name                = "privatelink.redis.cache.windows.net"
+  name                = "privatelink.redis.azure.net"
   resource_group_name = azurerm_resource_group.main.name
 }
 
@@ -162,8 +164,8 @@ resource "azurerm_private_endpoint" "redis" {
 
   private_service_connection {
     name                           = "redis-connection"
-    private_connection_resource_id = azurerm_redis_cache.main.id
-    subresource_names              = ["redisCache"]
+    private_connection_resource_id = azurerm_managed_redis.main.id
+    subresource_names              = ["redisEnterprise"]
     is_manual_connection           = false
   }
 
