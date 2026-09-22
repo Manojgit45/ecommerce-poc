@@ -6,6 +6,10 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ $name }}
     app.kubernetes.io/part-of: ecommerce
+  {{- if eq $name "frontend" }}
+  annotations:
+    service.beta.kubernetes.io/azure-dns-label-name: ecommerce-poc-frontend
+  {{- end }}
 spec:
   type: {{ if eq $name "frontend" }}{{ $.Values.service.type | default "ClusterIP" }}{{ else }}ClusterIP{{ end }}
   selector:
