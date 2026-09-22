@@ -64,3 +64,9 @@ variable "apim_publisher_name" {
 variable "apim_publisher_email" {
   type = string
 }
+
+variable "apim_backend_url" {
+  description = "Public frontend hostname used by APIM to reach the ecommerce API proxy."
+  type        = string
+  default     = "http://ecommerce-poc-frontend.centralus.cloudapp.azure.com/api"
+}

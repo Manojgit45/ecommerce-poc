@@ -53,3 +53,7 @@ output "sql_server_fqdn" {
 output "apim_gateway_url" {
   value = azurerm_api_management.main.gateway_url
 }
+
+output "apim_ecommerce_api_url" {
+  value = "${azurerm_api_management.main.gateway_url}/ecommerce"
+}
