@@ -29,6 +29,23 @@ variable "node_vm_size" {
   default     = "Standard_D2s_v7"
 }
 
+variable "jumpbox_vm_size" {
+  description = "VM size for the private AKS administration jumpbox."
+  type        = string
+  default     = "Standard_D2s_v7"
+}
+
+variable "jumpbox_admin_username" {
+  description = "Linux username for the private AKS administration jumpbox."
+  type        = string
+  default     = "azureadmin"
+}
+
+variable "jumpbox_ssh_public_key" {
+  description = "SSH public key used to access the jumpbox through Azure Bastion."
+  type        = string
+}
+
 variable "sql_admin_username" {
   type    = string
   default = "ecommerceadmin"

@@ -10,6 +10,18 @@ output "aks_name" {
   value = azurerm_kubernetes_cluster.main.name
 }
 
+output "jumpbox_name" {
+  value = azurerm_linux_virtual_machine.jumpbox.name
+}
+
+output "jumpbox_private_ip" {
+  value = azurerm_network_interface.jumpbox.private_ip_address
+}
+
+output "bastion_name" {
+  value = azurerm_bastion_host.main.name
+}
+
 output "aks_oidc_issuer_url" {
   value = azurerm_kubernetes_cluster.main.oidc_issuer_url
 }
