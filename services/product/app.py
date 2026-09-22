@@ -1,5 +1,7 @@
 import os
+import json
 from datetime import datetime, timezone
+from urllib.request import Request, urlopen
 from uuid import uuid4
 
 from flask import Flask, jsonify, render_template_string, request
@@ -7,6 +9,17 @@ from flask import Flask, jsonify, render_template_string, request
 app = Flask(__name__)
 SERVICE_NAME = os.getenv("SERVICE_NAME", "product")
 STARTED_AT = datetime.now(timezone.utc)
+
+
+def post_json(base_url, path, payload):
+        request = Request(
+                f"{base_url.rstrip('/')}{path}",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+        )
+        with urlopen(request, timeout=8) as response:
+                return json.loads(response.read().decode("utf-8"))
 
 CATALOG = [
         {
@@ -275,30 +288,58 @@ def checkout():
         payment_id = f"pay_{uuid4().hex[:10]}"
         notification_id = f"ntf_{uuid4().hex[:10]}"
 
+        order = {
+                "id": order_id,
+                "status": "confirmed",
+                "placedAt": now_iso(),
+                "customer": {
+                        "name": customer.get("name", "Guest Shopper"),
+                        "email": customer.get("email", "guest@example.com"),
+                },
+                "items": totals["items"],
+                "summary": {key: totals[key] for key in ["subtotal", "discount", "shipping", "tax", "total"]},
+        }
+        order_service_url = os.getenv("ORDER_SERVICE_URL")
+        if order_service_url:
+                order_response = post_json(
+                        order_service_url,
+                        "/api/orders",
+                        {
+                                "items": totals["items"],
+                                "customer": customer,
+                                "shippingAddress": payload.get("shippingAddress", {}),
+                        },
+                )
+                order = order_response["order"]
+
+        notification = {
+                "id": notification_id,
+                "channel": "email",
+                "status": "sent",
+                "message": f"Order {order['id']} confirmation sent.",
+        }
+        notification_service_url = os.getenv("NOTIFICATION_SERVICE_URL")
+        if notification_service_url:
+                notification = post_json(
+                        notification_service_url,
+                        "/api/notifications/send",
+                        {
+                                "to": customer.get("email", "guest@example.com"),
+                                "subject": f"Order {order['id']} confirmation",
+                                "body": f"Your order {order['id']} has been confirmed.",
+                                "metadata": {"orderId": order["id"]},
+                        },
+                )["notification"]
+
         return jsonify(
                 service=SERVICE_NAME,
-                order={
-                        "id": order_id,
-                        "status": "confirmed",
-                        "placedAt": now_iso(),
-                        "customer": {
-                                "name": customer.get("name", "Guest Shopper"),
-                                "email": customer.get("email", "guest@example.com"),
-                        },
-                        "items": totals["items"],
-                        "summary": {key: totals[key] for key in ["subtotal", "discount", "shipping", "tax", "total"]},
-                },
+                order=order,
                 payment={
                         "id": payment_id,
                         "status": "captured",
                         "method": payload.get("paymentMethod", "card"),
                 },
-                notification={
-                        "id": notification_id,
-                        "channel": "email",
-                        "status": "sent",
-                        "message": f"Order {order_id} confirmation sent.",
-                },
+                notification=notification,
                 fulfillment={
                         "warehouse": "phoenix-01",
                         "tracking": f"TRK-{uuid4().hex[:8].upper()}",

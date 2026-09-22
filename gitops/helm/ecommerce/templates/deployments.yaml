@@ -38,6 +38,40 @@ spec:
           env:
             - name: BACKEND_URL
               value: {{ $.Values.frontend.backendUrl | quote }}
+          {{- else if eq $name "order" }}
+          env:
+            - name: KEY_VAULT_URL
+              value: {{ $.Values.azure.keyVaultUrl | quote }}
+            - name: SQL_SERVER
+              value: {{ $.Values.azure.sqlServer | quote }}
+            - name: SQL_DATABASE
+              value: {{ $.Values.azure.sqlDatabase | quote }}
+            - name: SQL_USERNAME
+              value: {{ $.Values.azure.sqlUsername | quote }}
+            - name: SQL_PASSWORD_SECRET
+              value: {{ $.Values.azure.sqlPasswordSecret | quote }}
+          {{- else if eq $name "cart" }}
+          env:
+            - name: KEY_VAULT_URL
+              value: {{ $.Values.azure.keyVaultUrl | quote }}
+            - name: REDIS_HOST
+              value: {{ $.Values.azure.redisHost | quote }}
+            - name: REDIS_PORT
+              value: {{ $.Values.azure.redisPort | quote }}
+            - name: REDIS_PASSWORD_SECRET
+              value: {{ $.Values.azure.redisPasswordSecret | quote }}
+          {{- else if eq $name "notification" }}
+          env:
+            - name: SERVICE_BUS_NAMESPACE
+              value: {{ $.Values.azure.serviceBusNamespace | quote }}
+            - name: SERVICE_BUS_QUEUE
+              value: {{ $.Values.azure.serviceBusQueue | quote }}
+          {{- else if eq $name "product" }}
+          env:
+            - name: ORDER_SERVICE_URL
+              value: {{ $.Values.azure.orderServiceUrl | quote }}
+            - name: NOTIFICATION_SERVICE_URL
+              value: {{ $.Values.azure.notificationServiceUrl | quote }}
           {{- end }}
           ports:
             - name: http

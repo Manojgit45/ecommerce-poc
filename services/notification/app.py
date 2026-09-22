@@ -1,7 +1,10 @@
+import json
 import os
 from datetime import datetime, timezone
 from uuid import uuid4
 
+from azure.identity import DefaultAzureCredential
+from azure.servicebus import ServiceBusClient, ServiceBusMessage
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
@@ -12,6 +15,16 @@ NOTIFICATIONS = []
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
+
+
+def publish_notification(notification):
+    namespace = os.getenv("SERVICE_BUS_NAMESPACE")
+    if not namespace:
+        return
+    with ServiceBusClient(namespace, DefaultAzureCredential()) as service_bus_client:
+        sender = service_bus_client.get_queue_sender(os.getenv("SERVICE_BUS_QUEUE", "notifications"))
+        with sender:
+            sender.send_messages(ServiceBusMessage(json.dumps(notification)))
 
 
 def emit_notification(payload):
@@ -26,12 +39,13 @@ def emit_notification(payload):
         "metadata": payload.get("metadata", {}),
     }
     NOTIFICATIONS.append(notification)
+    publish_notification(notification)
     return notification
 
 
 @app.get("/healthz")
 def healthz():
-    return jsonify(service=SERVICE_NAME, status="ok", startedAt=STARTED_AT.isoformat())
+    return jsonify(service=SERVICE_NAME, status="ok", persistence="service-bus", startedAt=STARTED_AT.isoformat())
 
 
 @app.get("/")

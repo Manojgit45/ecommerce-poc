@@ -9,17 +9,17 @@ services:
     targetPort: 3000
   product:
     image: product-service
-    tag: amd64
+    tag: azure-integrated
     port: 80
     targetPort: 8080
   cart:
     image: cart-service
-    tag: amd64
+    tag: azure-integrated
     port: 80
     targetPort: 8080
   order:
     image: order-service
-    tag: amd64
+    tag: azure-integrated
     port: 80
     targetPort: 8080
   payment:
@@ -29,7 +29,7 @@ services:
     targetPort: 8080
   notification:
     image: notification-service
-    tag: amd64
+    tag: azure-integrated
     port: 80
     targetPort: 8080
 
@@ -38,6 +38,19 @@ frontend:
   backendUrl: "http://ecommerce-ecommerce-product"
 workloadIdentity:
   clientId: "8f1389b3-a6a6-4270-9e78-fcae6a6eac9b"
+azure:
+  keyVaultUrl: "https://ecommercepockv.vault.azure.net/"
+  sqlServer: "ecommerce-poc-sql.database.windows.net"
+  sqlDatabase: "ecommerce"
+  sqlUsername: "ecommerceadmin"
+  sqlPasswordSecret: "sql-admin-password"
+  redisHost: "ecommerce-poc-redis.centralus.redis.azure.net"
+  redisPort: "10000"
+  redisPasswordSecret: "redis-primary-access-key"
+  serviceBusNamespace: "ecommerce-poc-bus.servicebus.windows.net"
+  serviceBusQueue: "notifications"
+  orderServiceUrl: "http://ecommerce-ecommerce-order"
+  notificationServiceUrl: "http://ecommerce-ecommerce-notification"
 service:
   type: LoadBalancer
   port: 80

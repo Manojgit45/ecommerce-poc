@@ -79,6 +79,21 @@ export TF_VAR_sql_admin_password=$(az keyvault secret show --vault-name "$(terra
 terraform plan
 ```
 
+The Managed Redis access key is also stored in Key Vault for the cart service. If
+the Redis secret is missing after the first apply, retrieve the key from Azure
+and write it while connected to the private Key Vault network:
+
+```bash
+redis_key=$(az redisenterprise database list-keys \
+	--resource-group ecommerce-poc-rg \
+	--cluster-name ecommerce-poc-redis \
+	--database-name default \
+	--query primaryKey -o tsv)
+az keyvault secret set --vault-name ecommercepockv \
+	--name redis-primary-access-key --value "$redis_key"
+unset redis_key
+```
+
 The Terraform GitHub Actions workflow performs this retrieval automatically. Because the Key Vault has private network access disabled, configure that workflow on a self-hosted runner with VNet/private-endpoint access, and set the repository variable `SQL_KEY_VAULT_NAME` plus optional `SQL_KEY_VAULT_SECRET_NAME`.
 
 ## GitHub Actions setup

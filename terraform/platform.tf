@@ -38,6 +38,12 @@ resource "azurerm_role_assignment" "workload_key_vault" {
   principal_id         = azurerm_user_assigned_identity.workload.principal_id
 }
 
+resource "azurerm_role_assignment" "workload_service_bus_sender" {
+  scope                = azurerm_servicebus_namespace.main.id
+  role_definition_name = "Azure Service Bus Data Sender"
+  principal_id         = azurerm_user_assigned_identity.workload.principal_id
+}
+
 resource "azurerm_servicebus_namespace" "main" {
   name                         = "${var.name_prefix}-bus"
   location                     = azurerm_resource_group.main.location

@@ -1,9 +1,13 @@
 import os
+import json
 from collections import defaultdict
 from datetime import datetime, timezone
 from uuid import uuid4
 
 from flask import Flask, jsonify, request
+import redis
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 
 app = Flask(__name__)
 SERVICE_NAME = os.getenv("SERVICE_NAME", "cart")
@@ -21,10 +25,32 @@ CATALOG = {
 PROMOTIONS = {"WELCOME10": 0.10, "BUNDLE8": 0.08, "FREESHIP": 0.0}
 DEFAULT_SESSION = "guest"
 SESSIONS = defaultdict(lambda: {"items": {}, "coupon": None, "createdAt": now_iso()})
+_secret_client = None
+_redis_client = None
 
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
+
+
+def redis_client():
+    global _redis_client, _secret_client
+    if _redis_client is None:
+        if not os.getenv("REDIS_HOST"):
+            return None
+        if _secret_client is None:
+            _secret_client = SecretClient(os.environ["KEY_VAULT_URL"], DefaultAzureCredential())
+        password = _secret_client.get_secret(os.getenv("REDIS_PASSWORD_SECRET", "REDIS_PASSWORD")).value
+        _redis_client = redis.Redis(
+            host=os.environ["REDIS_HOST"],
+            port=int(os.getenv("REDIS_PORT", "10000")),
+            password=password,
+            ssl=True,
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_timeout=5,
+        )
+    return _redis_client
 
 
 def session_id():
@@ -33,7 +59,23 @@ def session_id():
 
 
 def cart_state():
-    return SESSIONS[session_id()]
+    client = redis_client()
+    if client is None:
+        return SESSIONS[session_id()]
+    raw = client.get(f"cart:{session_id()}")
+    if raw:
+        return json.loads(raw)
+    state = {"items": {}, "coupon": None, "createdAt": now_iso()}
+    client.set(f"cart:{session_id()}", json.dumps(state))
+    return state
+
+
+def save_cart(cart):
+    client = redis_client()
+    if client is None:
+        SESSIONS[session_id()] = cart
+    else:
+        client.set(f"cart:{session_id()}", json.dumps(cart))
 
 
 def cart_summary(cart):
@@ -87,7 +129,7 @@ def set_item(cart, sku, quantity):
 
 @app.get("/healthz")
 def healthz():
-    return jsonify(service=SERVICE_NAME, status="ok", startedAt=STARTED_AT.isoformat())
+    return jsonify(service=SERVICE_NAME, status="ok", persistence="redis", startedAt=STARTED_AT.isoformat())
 
 
 @app.get("/")
@@ -121,6 +163,7 @@ def add_item():
     updated = set_item(cart, sku, quantity if payload.get("replace") else existing_quantity + quantity)
     if updated is None:
         return jsonify(error="unknown sku", sku=sku), 404
+    save_cart(cart)
     return jsonify(service=SERVICE_NAME, cart=updated), 201
 
 
@@ -130,6 +173,7 @@ def update_item(sku):
     updated = set_item(cart_state(), sku, payload.get("quantity", 1))
     if updated is None:
         return jsonify(error="unknown sku", sku=sku), 404
+    save_cart(cart_state())
     return jsonify(service=SERVICE_NAME, cart=updated)
 
 
@@ -137,6 +181,7 @@ def update_item(sku):
 def delete_item(sku):
     cart = cart_state()
     cart["items"].pop(sku, None)
+    save_cart(cart)
     return jsonify(service=SERVICE_NAME, cart=cart_summary(cart))
 
 
@@ -148,6 +193,7 @@ def apply_coupon():
         return jsonify(error="unknown coupon", validCodes=sorted(PROMOTIONS)), 404
     cart = cart_state()
     cart["coupon"] = coupon
+    save_cart(cart)
     return jsonify(service=SERVICE_NAME, cart=cart_summary(cart))
 
 
@@ -158,8 +204,9 @@ def preview():
 
 @app.delete("/api/cart")
 def clear_cart():
-    SESSIONS[session_id()] = {"items": {}, "coupon": None, "createdAt": now_iso()}
-    return jsonify(service=SERVICE_NAME, cart=cart_summary(cart_state()))
+    cart = {"items": {}, "coupon": None, "createdAt": now_iso()}
+    save_cart(cart)
+    return jsonify(service=SERVICE_NAME, cart=cart_summary(cart))
 
 
 @app.get("/api/sessions")
@@ -179,6 +226,7 @@ def seed_cart():
     cart = cart_state()
     for item in payload.get("items", []):
         set_item(cart, item.get("sku"), item.get("quantity", 1))
+    save_cart(cart)
     return jsonify(service=SERVICE_NAME, cart=cart_summary(cart), seedId=f"seed_{uuid4().hex[:8]}")
 
 
