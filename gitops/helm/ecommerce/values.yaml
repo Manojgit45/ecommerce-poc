@@ -4,32 +4,32 @@ global:
 services:
   frontend:
     image: frontend-service
-    tag: latest
+    tag: amd64
     port: 80
     targetPort: 3000
   product:
     image: product-service
-    tag: latest
+    tag: amd64
     port: 80
     targetPort: 8080
   cart:
     image: cart-service
-    tag: latest
+    tag: amd64
     port: 80
     targetPort: 8080
   order:
     image: order-service
-    tag: latest
+    tag: amd64
     port: 80
     targetPort: 8080
   payment:
     image: payment-service
-    tag: latest
+    tag: amd64
     port: 80
     targetPort: 8080
   notification:
     image: notification-service
-    tag: latest
+    tag: amd64
     port: 80
     targetPort: 8080
 
